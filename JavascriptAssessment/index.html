@@ -77,7 +77,7 @@
               let str = "";
               for (let j = 0; j < i + 1; j++) {
                 setTimeout(() => {
-                  str += "X";
+                  str = str.padStart(j + 1, "X");
                   ex.textContent = str;
                 }, 10 * j);
               }
@@ -101,6 +101,7 @@
           const deleteButton = document.createElement("button");
           messageElement.classList.add("message");
           deleteButton.classList.add("delete-button");
+          messageContent.classList.add("message-text");
           messageContent.textContent = message;
           deleteButton.textContent = "Delete";
           messageElement.appendChild(messageContent);
@@ -212,7 +213,7 @@
           this.view.clearForm();
           const days = this.model.dateDiff(birthday);
           const message = this.view.renderMessage(
-            `Thank you, ${fname} ${lname}. Your User ID is ${uid}. You are ${days} days old.` +
+            `${fname} ${lname} has been breathing for ${days} days.` +
               (this.model.verifyUnder18(birthday)
                 ? " You are probably too young to take this class!"
                 : "")
@@ -300,6 +301,11 @@
         border-radius: 5px;
         border: 1px solid lightgrey;
         background-color: lightgreen;
+        width: 100%;
+        text-align: center;
+      }
+      .message-text {
+        margin: auto;
       }
       .delete-button {
         margin-left: 5px;
