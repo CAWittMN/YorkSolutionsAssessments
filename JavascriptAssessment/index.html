@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Javascript Assessment</title>
+  </head>
+  <body>
+    <div id="container">
+      <h1>JavaScript Assessment</h1>
+      <div id="upper-container">
+        <div id="exes-container">
+          <div id="button-container">
+            <button id="exes-button">Generate Exes</button>
+            <button id="clear-exes-button">Clear Exes</button>
+          </div>
+          <div id="exes-box"></div>
+        </div>
+        <div id="form-container">
+          <form id="id-form">
+            <label for="uid">User ID:</label>
+            <input type="text" id="uid" name="uid" />
+            <label for="fname">First Name:</label>
+            <input type="text" id="fname" name="fname" />
+            <label for="lname">Last Name:</label>
+            <input type="text" id="lname" name="lname" />
+            <label for="birthday">Birthday:</label>
+            <input type="date" id="birthday" name="birthday" />
+            <button id="submit" type="submit">Accept</button>
+          </form>
+        </div>
+        <div id="error-container"></div>
+      </div>
+      <div id="messages-container"></div>
+    </div>
+    <script>
+      //View class to responsible for rendering to and updating the DOM
+      class View {
+        constructor() {
+          this.exesBox = document.getElementById("exes-box");
+          this.exesButton = document.getElementById("exes-button");
+          this.clearExesButton = document.getElementById("clear-exes-button");
+          this.messageBox = document.getElementById("messages-container");
+          this.clearMessageButton = document.createElement("button");
+          this.clearMessageButton.textContent = "Clear Messages";
+          this.clearMessageButton.id = "clear-messages-button";
+          this.form = document.getElementById("id-form");
+          this.errorBox = document.getElementById("error-container");
+          this.dismissButton = document.createElement("button");
+          this.dismissButton.textContent = "Dismiss";
+          this.dismissButton.id = "dismiss-button";
+          this.mainContainer = document.getElementById("container");
+        }
+
+        clearErrors() {
+          this.errorBox.innerHTML = "";
+        }
+
+        clearMessages() {
+          this.messageBox.innerHTML = "";
+        }
+
+        clearForm() {
+          this.form.reset();
+        }
+
+        clearExes() {
+          this.exesBox.innerHTML = "";
+        }
+
+        renderExes() {
+          for (let i = 0; i < 20; i++) {
+            setTimeout(() => {
+              const ex = document.createElement("p");
+              ex.classList.add("ex");
+              this.exesBox.appendChild(ex);
+              let str = "";
+              for (let j = 0; j < i + 1; j++) {
+                setTimeout(() => {
+                  str += "X";
+                  ex.textContent = str;
+                }, 10 * j);
+              }
+            }, 50 * i);
+          }
+        }
+
+        renderErrors(errors) {
+          errors.forEach((error) => {
+            const errorMessage = document.createElement("p");
+            errorMessage.textContent = error;
+            errorMessage.classList.add("error");
+            this.errorBox.appendChild(errorMessage);
+          });
+          this.errorBox.appendChild(this.dismissButton);
+        }
+
+        renderMessage(message) {
+          const messageElement = document.createElement("div");
+          const messageContent = document.createElement("p");
+          const deleteButton = document.createElement("button");
+          messageElement.classList.add("message");
+          deleteButton.classList.add("delete-button");
+          messageContent.textContent = message;
+          deleteButton.textContent = "Delete";
+          messageElement.appendChild(messageContent);
+          messageElement.appendChild(deleteButton);
+          if (this.messageBox.children.length === 0) {
+            this.messageBox.append(this.clearMessageButton);
+          }
+          this.messageBox.appendChild(messageElement);
+          return messageElement;
+        }
+
+        deleteMessage(target) {
+          target.remove();
+        }
+      }
+
+      //Model class responsible for handling data and business logic
+      class Model {
+        constructor() {
+          this.form = document.getElementById("id-form");
+          this.formErrors = [];
+        }
+
+        dateDiff(birthday) {
+          const diffTime = Math.abs(new Date(birthday) - new Date());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          return diffDays;
+        }
+
+        getFormData() {
+          return Object.fromEntries(new FormData(this.form));
+        }
+
+        verifyUid(uid) {
+          const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,12}$/;
+          return regex.test(uid);
+        }
+
+        verifyUnder18(birthday) {
+          const diffTime = Math.abs(new Date(birthday) - new Date());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          return diffDays < 6570;
+        }
+
+        verifyData(data) {
+          const { uid, fname, lname, birthday } = data;
+          if (!this.verifyUid(uid)) {
+            this.formErrors.push(
+              "User ID must be 8-12 characters long and contain at least one uppercase letter, one lowercase letter, and one number."
+            );
+          }
+          if (fname === "" || lname === "" || birthday === "") {
+            this.formErrors.push(
+              (fname === "" ? " First Name is required." : "") +
+                (lname === "" ? " Last Name is required." : "") +
+                (birthday === "" ? " Birthday is required." : "")
+            );
+          }
+          if (this.formErrors.length > 0) {
+            return false;
+          } else {
+            return true;
+          }
+        }
+      }
+
+      //Controller class responsible for handling user input and interaction between the Model and View
+      class Controller {
+        constructor(model, view) {
+          this.model = model;
+          this.view = view;
+          this.view.form.addEventListener(
+            "submit",
+            this.handleSubbmit.bind(this)
+          );
+          this.view.dismissButton.addEventListener("click", () => {
+            this.view.clearErrors();
+          });
+          this.view.clearMessageButton.addEventListener("click", () => {
+            this.view.clearMessages();
+          });
+          this.view.exesButton.addEventListener("click", () => {
+            this.view.clearExes();
+            this.view.renderExes();
+          });
+          this.view.clearExesButton.addEventListener("click", () => {
+            this.view.clearExes();
+          });
+        }
+
+        handleDelete(event) {
+          if (event.target.classList.contains("delete-button")) {
+            this.view.deleteMessage(event.target.parentElement);
+          }
+          if (this.view.messageBox.children.length === 1) {
+            this.view.clearMessageButton.remove();
+          }
+        }
+
+        handleSubbmit(event) {
+          event.preventDefault();
+          this.view.clearErrors();
+          this.model.formErrors = [];
+          const { uid, fname, lname, birthday } = this.model.getFormData();
+          if (!this.model.verifyData({ uid, fname, lname, birthday })) {
+            this.view.renderErrors(this.model.formErrors);
+            return;
+          }
+          this.view.clearForm();
+          const days = this.model.dateDiff(birthday);
+          const message = this.view.renderMessage(
+            `Thank you, ${fname} ${lname}. Your User ID is ${uid}. You are ${days} days old.` +
+              (this.model.verifyUnder18(birthday)
+                ? " You are probably too young to take this class!"
+                : "")
+          );
+          message.addEventListener("click", this.handleDelete.bind(this));
+        }
+      }
+
+      //Create an instance of the Controller class to start the application
+      const app = new Controller(new Model(), new View());
+    </script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: lightgrey;
+        margin: 0;
+        padding: 0;
+      }
+      #container {
+        max-width: 1500px;
+        display: flex;
+        margin: 5rem auto;
+        flex-direction: column;
+      }
+      h1 {
+        text-align: center;
+      }
+      #upper-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+      }
+      #form-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: white;
+        padding: 20px;
+        margin: auto;
+        width: 150px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+      }
+      #id-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      label {
+        margin-top: 5px;
+      }
+      input {
+        margin: 5px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid lightgrey;
+      }
+      button {
+        margin: 5px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid lightgrey;
+        background-color: lightblue;
+        cursor: pointer;
+        box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
+      }
+      #messages-container {
+        width: 700px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .message {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 5px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid lightgrey;
+        background-color: lightgreen;
+      }
+      .delete-button {
+        margin-left: 5px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid lightgrey;
+        background-color: lightcoral;
+        cursor: pointer;
+      }
+      #exes-container {
+        height: 300px;
+        margin-left: 20px;
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+        margin-top: 20px;
+      }
+      .ex {
+        margin: 5px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid lightgrey;
+        background-color: lightyellow;
+      }
+      #error-container {
+        display: flex;
+        width: 300px;
+        color: white;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-top: 20px;
+        filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.2));
+      }
+      .error {
+        margin: 5px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid lightgrey;
+        background-color: rgb(226, 102, 102);
+      }
+      #dismiss-button {
+        margin: 5px;
+        padding: 5px;
+        color: rgb(246, 209, 209);
+        border-radius: 5px;
+        border: 1px solid lightgrey;
+        background-color: lightcoral;
+        cursor: pointer;
+      }
+    </style>
+  </body>
+</html>
